@@ -20,7 +20,7 @@
       implicit none 
 
       integer :: i
-      type(point_mass) :: test_mass
+      character(len=12) :: filename
 
       real, dimension(2,3) :: x
       real, dimension(2,3) :: v
@@ -37,19 +37,29 @@
       ! 
 
     x = 0.
-    x(1,:) = [1.,2.,0.]
+    x(1,:) = [0.,1.,0.]
+    x(2,:) = [0.,-1.,0.]
     v = 0.
+    v(1,:) = [1.,0.,0.]
+    v(2,:) = [-1.,0.,0.]
     a = 0.
     t = 0.
     h = 0.2
 
-    state(1,1:3) = x(1,1:3)
-    state(1,4:6) = v(1,1:3)
+    state(:,1:3) = x(:,1:3)
+    state(:,4:6) = v(:,1:3)
 
-    do i = 1, 20
+    do i = 1, 100
       t = i*h
       state = RK4(state, t, h, x1_attracts_x2)
-      print *, "t, x1, x2:", t, state(1,1:3), state(2,1:3)
+      write(filename, '(A4,I4.4,A4)') "res_",i,".csv"
+      open(unit=20, file=filename)
+
+      write(20, '(A16)') "x1, x2, x3, t" 
+      write(20, '(4(F8.4,A2))') state(1,1), ",", state(1,2), ",", state(1,3), ",", t
+      write(20, '(4(F8.4,A2))') state(2,1), ",", state(2,2), ",", state(2,3), ",", t
+
+      close(20)
     end do
   end subroutine main_loop
 
