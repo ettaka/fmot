@@ -1,6 +1,6 @@
   module fmot
     implicit none
-    integer, parameter :: n_particles = 3
+    integer, parameter :: n_particles = 4
 
   contains
     subroutine say_hello
@@ -21,7 +21,6 @@
       implicit none 
 
       integer :: i, j
-      character(len=12) :: filename
 
       real, dimension(n_particles,3) :: x
       real, dimension(n_particles,3) :: v
@@ -38,13 +37,15 @@
       ! 
 
     x = 0.
-    x(1,:) = [1./sqrt(3.),1./2./sqrt(3.),0.]
-    x(2,:) = -x(1,:)
-    x(3,:) = [0.,-1.,0.]
+    x(1,:) = [1.,0.,0.]
+    x(2,:) = [0.,1.,0.]
+    x(3,:) = [-1.,0.,0.]
+    x(4,:) = [0.,-1.,0.]
     v = 0.
-    v(1,:) = [-x(1,1), x(1,2), 0.]
-    v(2,:) = [-x(1,1), -x(1,2), 0.]
-    v(3,:) = [1.,0.,0.]
+    v(1,:) = [0.,2.,0.]
+    v(2,:) = [-2.,0.,0.]
+    v(3,:) = [0.,-2.,0.]
+    v(4,:) = [2.,0.,0.]
     a = 0.
     t = 0.
     h = 0.2
@@ -52,20 +53,31 @@
     state(:,1:3) = x(:,1:3)
     state(:,4:6) = v(:,1:3)
 
+    call write_particles(state, 0, 0.)
     do i = 1, 100
       t = i*h
       state = RK4(state, t, h, pi_attracts_pj)
-      write(filename, '(A4,I4.4,A4)') "res_",i,".csv"
-      open(unit=20, file=filename)
-
-      write(20, '(A16)') "x1, x2, x3, t" 
-      do j = 1, n_particles
-        write(20, '(4(F8.4,A2))') state(j,1), ",", state(j,2), ",", state(j,3), ",", t
-      end do
-
-      close(20)
+      call write_particles(state, i, t)
     end do
   end subroutine main_loop
+
+  subroutine write_particles(state, i, t)
+    integer, intent(in) :: i
+    real, intent(in) :: t
+    real, dimension(n_particles,6), intent(in) :: state
+    integer :: j
+    character(len=12) :: filename
+
+    write(filename, '(A4,I4.4,A4)') "res_",i,".csv"
+    open(unit=20, file=filename)
+
+    write(20, '(A16)') "x1, x2, x3, t" 
+    do j = 1, n_particles
+      write(20, '(4(F8.4,A2))') state(j,1), ",", state(j,2), ",", state(j,3), ",", t
+    end do
+
+    close(20)
+  end subroutine
 
   function RK4(y1, t1, h, f) result (y2)
     implicit none
