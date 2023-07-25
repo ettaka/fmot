@@ -1,21 +1,9 @@
   module fmot
     implicit none
-    integer, parameter :: n_particles = 6
+    integer, parameter :: n_particles = 3
     real, parameter :: pi = 4.*atan(1.)
 
   contains
-    subroutine say_hello
-      use types
-      implicit none 
-
-      type(point_mass) :: test_mass
-
-      test_mass % coordinates(1) = 1.
-      test_mass % coordinates(2) = 2.
-      test_mass % coordinates(3) = 3.
-
-      print *, "test_mass % coordinates", test_mass % coordinates
-    end subroutine say_hello
 
     subroutine main_loop
       use types
@@ -76,7 +64,9 @@
     call write_particles(state, 0, 0.)
     do i = 1, 100
       t = i*h
-      state = RK4(state, t, h, pi_attracts_pj)
+      state = state &
+              + dRK4(state, t, h, pi_attracts_pj) !&
+              !+ dRK4(state, t, h, constant_a_1)
       call set_walls(state, xlim)
       if (modulo(i, write_output) .eq. 0) then
         call write_particles(state, i, t)
@@ -125,7 +115,7 @@
     close(20)
   end subroutine
 
-  function RK4(y1, t1, h, f) result (y2)
+  function dRK4(y1, t1, h, f) result (y2)
     implicit none
     real, dimension(:,:),                             intent(in) :: y1
     real,                                             intent(in) :: t1, h
@@ -154,7 +144,7 @@
     k2 = f(t1 + h/2., y1 + k1*h/2.)
     k3 = f(t1 + h/2., y1 + k2*h/2.)
     k4 = f(t1 + h   , y1 + k3*h   )
-    y2 = y1 + h/6.*(k1 + 2*k2 + 2*k3 + k4)
+    y2 = h/6.*(k1 + 2*k2 + 2*k3 + k4)
   end function
 
   function zero_force(t, state) result(dstate)
@@ -174,7 +164,7 @@
     real, dimension(size(state,1), size(state,2))     :: dstate
 
     dstate(:,1:3) = state(:,4:6)
-    dstate(1,4:6) = [1.0,0.1,0.01]
+    dstate(1,4:6) = [0.,2.,0.]
   end function constant_a_1
 
   function towards_zero_x(t, state) result(dstate)
