@@ -1,6 +1,7 @@
   module fmot
     implicit none
-    integer, parameter :: n_particles = 4
+    integer, parameter :: n_particles = 6
+    real, parameter :: pi = 4.*atan(1.)
 
   contains
     subroutine say_hello
@@ -41,17 +42,22 @@
       ! 
 
     x = 0.
-    x(1,:) = [1.,0.,0.]
-    x(2,:) = [0.,1.,0.]
-    x(3,:) = [-1.,0.,0.]
-    x(4,:) = [0.,-1.,0.]
     v = 0.
     block 
-      real :: speed = 0.5
-      v(1,:) = [0.,speed,0.]
-      v(2,:) = [-speed,0.,0.]
-      v(3,:) = [0.,-speed,0.]
-      v(4,:) = [speed,0.,0.]
+      real :: speed = 1.5
+      real :: radius = 1.
+      real :: RM(3,3) = 0.
+
+      RM(1:3,1) = [cos(2.*pi/n_particles), -sin(2.*pi/n_particles), 0.]
+      RM(1:3,2) = [sin(2.*pi/n_particles),  cos(2.*pi/n_particles), 0.]
+      RM(1:3,3) = [0.                    , 0.                     , 1.]
+               
+      x(1, :) = [radius, 0.    , 0.]
+      v(1, :) = [0.    , radius, 0.]
+      do i = 2, n_particles
+        x(i, :) = matmul(RM, x(i-1, :))
+        v(i, :) = matmul(RM, v(i-1, :))
+      end do
     end block 
 
     block
