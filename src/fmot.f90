@@ -31,7 +31,7 @@
       t = 0.
       h = 0.1035
 
-      call init_particles(x, v)
+      call init_particles(x, v, speed=1.5, radius=1.)
 
       state(:,1:3) = x(:,1:3)
       state(:,4:6) = v(:,1:3)
@@ -52,11 +52,11 @@
       end do
     end subroutine main_loop
 
-    subroutine init_particles(x, v)
+    subroutine init_particles(x, v, speed, radius)
       real, dimension(n_particles,3) :: x
       real, dimension(n_particles,3) :: v
-      real :: speed = 1.5
-      real :: radius = 1.
+      real, intent(in) :: speed
+      real, intent(in) :: radius
       real :: RM(3,3) = 0.
       integer :: i
 
