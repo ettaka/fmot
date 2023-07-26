@@ -31,7 +31,7 @@
       t = 0.
       h = 0.1035
 
-      call init_particles(x, v, speed=1.5, radius=1.)
+      call init_particles(x, v, speed=1., radius=1.)
 
       state(:,1:3) = x(:,1:3)
       state(:,4:6) = v(:,1:3)
@@ -68,7 +68,7 @@
       RM(1:3,3) = [0.                    , 0.                     , 1.]
                
       x(1, :) = [radius, 0.    , 0.]
-      v(1, :) = [0.    , radius, 0.]
+      v(1, :) = [0.    , speed, 0.]
       do i = 2, n_particles
         x(i, :) = matmul(RM, x(i-1, :))
         v(i, :) = matmul(RM, v(i-1, :))
