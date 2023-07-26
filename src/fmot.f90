@@ -1,4 +1,5 @@
   module fmot
+    use output
     implicit none
     integer, parameter :: n_particles = 3
     real, parameter :: pi = 4.*atan(1.)
@@ -38,7 +39,7 @@
       xlim(1, 1:3) = [-box_size,-box_size,-box_size] ! minimum x
       xlim(2, 1:3) = [box_size,box_size,box_size] ! maximum x
 
-      call write_particles(state, 0, 0.)
+      call write_particles(state, 0, 0., n_particles)
       do i = 1, 100
         t = i*h
         state = state &
@@ -46,7 +47,7 @@
                 !+ dRK4(state, t, h, constant_a_1)
         call set_walls(state, xlim)
         if (modulo(i, write_output) .eq. 0) then
-          call write_particles(state, i, t)
+          call write_particles(state, i, t, n_particles)
         end if
       end do
     end subroutine main_loop
@@ -97,23 +98,6 @@
       end do
     end subroutine
 
-    subroutine write_particles(state, i, t)
-      integer, intent(in) :: i
-      real, intent(in) :: t
-      real, dimension(n_particles,6), intent(in) :: state
-      integer :: j
-      character(len=12) :: filename
-
-      write(filename, '(A4,I4.4,A4)') "res_",i,".csv"
-      open(unit=20, file=filename)
-
-      write(20, '(A16)') "x1, x2, x3, t" 
-      do j = 1, n_particles
-        write(20, '(4(F8.4,A2))') state(j,1), ",", state(j,2), ",", state(j,3), ",", t
-      end do
-
-      close(20)
-    end subroutine
 
     function dRK4(y1, t1, h, f) result (y2)
       real, dimension(:,:),                             intent(in) :: y1
