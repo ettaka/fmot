@@ -43,7 +43,8 @@
       do i = 1, 100
         t = i*h
         state = state &
-                + dRK4(state, t, h, pi_attracts_pj) !&
+                + dRK4(state, t, h, pi_attracts_pj) &
+                + dRK4(state, t, h, medium_resistance) !&
                 !+ dRK4(state, t, h, constant_a_1)
         call set_walls(state, xlim)
         if (modulo(i, write_output) .eq. 0) then
@@ -199,5 +200,24 @@
       end do
           
     end function pi_attracts_pj
+
+    function medium_resistance(t, state) result(dstate)
+      real              , intent(in) :: t
+      real, dimension(:,:), intent(in) :: state
+      real, dimension(size(state,1), size(state,2))     :: dstate
+      real, dimension(3) :: x1, x2
+      real, dimension(3) :: a, v
+      real :: r
+      integer :: i
+
+      dstate(:,1:3) = 0.
+      dstate(:,4:6) = 0.
+      do i=1,n_particles
+        v = state(i,4:6)
+        a = -0.3*v**2. * v/sqrt(sum(v**2.))
+        dstate(i,4:6) = dstate(i,4:6) + a
+      end do
+          
+    end function medium_resistance
 
 end module fmot
