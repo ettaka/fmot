@@ -180,6 +180,7 @@
       real, dimension(:,:), intent(in) :: state
       real, dimension(size(state,1), size(state,2))     :: dstate
       real, dimension(3) :: x1, x2
+      real, dimension(3) :: a
       real :: r
       integer :: i, j
 
@@ -191,7 +192,8 @@
             x1 = state(i,1:3)
             x2 = state(j,1:3)
             r = sqrt(sum((x1-x2)**2.))
-            dstate(i,4:6) = dstate(i,4:6) + (x2-x1)/r**2.
+            a = (x2-x1)/r**2.
+            dstate(i,4:6) = dstate(i,4:6) + a
           end if
         end do
       end do
