@@ -43,6 +43,7 @@
       do i = 1, 100
         t = i*h
         state = state &
+                + dRK4(state, t, h, velocity_to_delta_x) &
                 + dRK4(state, t, h, pi_attracts_pj) &
                 + dRK4(state, t, h, medium_resistance) !&
                 !+ dRK4(state, t, h, constant_a_1)
@@ -176,6 +177,15 @@
       dstate(2,4:6) = (x1-x2)/r**2.
     end function p1_attracts_p2
 
+    function velocity_to_delta_x(t, state) result(dstate)
+      real              , intent(in) :: t
+      real, dimension(:,:), intent(in) :: state
+      real, dimension(size(state,1), size(state,2))     :: dstate
+
+      dstate(:,1:3) = state(:,4:6)
+      dstate(:,4:6) = 0.
+    end function velocity_to_delta_x
+
     function pi_attracts_pj(t, state) result(dstate)
       real              , intent(in) :: t
       real, dimension(:,:), intent(in) :: state
@@ -185,8 +195,7 @@
       real :: r
       integer :: i, j
 
-      dstate(:,1:3) = state(:,4:6)
-      dstate(:,4:6) = 0.
+      dstate(:,:) = 0.
       do i=1,n_particles
         do j=1,n_particles
           if (i .ne. j) then
@@ -210,8 +219,7 @@
       real :: r
       integer :: i
 
-      dstate(:,1:3) = 0.
-      dstate(:,4:6) = 0.
+      dstate(:,:) = 0.
       do i=1,n_particles
         v = state(i,4:6)
         a = -0.3*v**2. * v/sqrt(sum(v**2.))
