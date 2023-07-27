@@ -1,8 +1,8 @@
   module fmot
     use output
+    use initialization
     implicit none
-    integer, parameter :: n_particles = 3
-    real, parameter :: pi = 4.*atan(1.)
+    integer, parameter :: n_particles = 5
 
   contains
 
@@ -31,7 +31,7 @@
       t = 0.
       h = 0.1035
 
-      call init_particles(x, v, speed=1., radius=1.)
+      call init_particles(x, v, speed=1., radius=1., n_particles=n_particles)
 
       state(:,1:3) = x(:,1:3)
       state(:,4:6) = v(:,1:3)
@@ -42,41 +42,16 @@
       call write_particles(state, 0, 0., n_particles)
       do i = 1, 100
         t = i*h
+        state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, h, velocity_to_delta_x)
         state = state &
-                + dRK4(state, t, h, velocity_to_delta_x) &
                 + dRK4(state, t, h, pi_attracts_pj) &
-                + dRK4(state, t, h, medium_resistance) !&
-                !+ dRK4(state, t, h, constant_a_1)
+                + dRK4(state, t, h, medium_resistance)
         call set_walls(state, xlim)
         if (modulo(i, write_output) .eq. 0) then
           call write_particles(state, i, t, n_particles)
         end if
       end do
     end subroutine main_loop
-
-    subroutine init_particles(x, v, speed, radius)
-      real, dimension(n_particles,3) :: x
-      real, dimension(n_particles,3) :: v
-      real, intent(in) :: speed
-      real, intent(in) :: radius
-      real :: RM(3,3) = 0.
-      integer :: i
-
-      x = 0.
-      v = 0.
-
-      RM(1:3,1) = [cos(2.*pi/n_particles), -sin(2.*pi/n_particles), 0.]
-      RM(1:3,2) = [sin(2.*pi/n_particles),  cos(2.*pi/n_particles), 0.]
-      RM(1:3,3) = [0.                    , 0.                     , 1.]
-               
-      x(1, :) = [radius, 0.    , 0.]
-      v(1, :) = [0.    , speed, 0.]
-      do i = 2, n_particles
-        x(i, :) = matmul(RM, x(i-1, :))
-        v(i, :) = matmul(RM, v(i-1, :))
-      end do
-
-    end subroutine
 
     subroutine set_walls(state, xlim)
       real, dimension(n_particles,6) :: state
@@ -177,13 +152,12 @@
       dstate(2,4:6) = (x1-x2)/r**2.
     end function p1_attracts_p2
 
-    function velocity_to_delta_x(t, state) result(dstate)
-      real              , intent(in) :: t
-      real, dimension(:,:), intent(in) :: state
-      real, dimension(size(state,1), size(state,2))     :: dstate
+    function velocity_to_delta_x(t, velocity) result(dx)
+      real, intent(in)                                    :: t
+      real, dimension(:,:), intent(in)                    :: velocity
+      real, dimension(size(velocity,1), size(velocity,2)) :: dx
 
-      dstate(:,1:3) = state(:,4:6)
-      dstate(:,4:6) = 0.
+      dx(:,1:3) = velocity(:,1:3)
     end function velocity_to_delta_x
 
     function pi_attracts_pj(t, state) result(dstate)
@@ -203,6 +177,7 @@
             x2 = state(j,1:3)
             r = sqrt(sum((x1-x2)**2.))
             a = (x2-x1)/r**2.
+            if (r<0.9) a=-2.*a
             dstate(i,4:6) = dstate(i,4:6) + a
           end if
         end do
@@ -211,9 +186,9 @@
     end function pi_attracts_pj
 
     function medium_resistance(t, state) result(dstate)
-      real              , intent(in) :: t
-      real, dimension(:,:), intent(in) :: state
-      real, dimension(size(state,1), size(state,2))     :: dstate
+      real, intent(in)                              :: t
+      real, dimension(:,:), intent(in)              :: state
+      real, dimension(size(state,1), size(state,2)) :: dstate
       real, dimension(3) :: x1, x2
       real, dimension(3) :: a, v
       real :: r
@@ -222,7 +197,7 @@
       dstate(:,:) = 0.
       do i=1,n_particles
         v = state(i,4:6)
-        a = -0.3*v**2. * v/sqrt(sum(v**2.))
+        a = -10*v**2. * v/sqrt(sum(v**2.))
         dstate(i,4:6) = dstate(i,4:6) + a
       end do
           
