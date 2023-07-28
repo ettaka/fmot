@@ -14,38 +14,26 @@
       real, dimension(model % n_particles,3) :: x
       real, dimension(model % n_particles,3) :: v
       real, dimension(model % n_particles,6) :: state
-      real                                   :: box_size=2.
       real, dimension(2, 3)                  :: xlim
-      real                                   :: t, h
-      integer                                :: write_output = 1
-
-
-      ! f = ma = m dv/dt = m ddt(x)
-      ! Runge-Kutta: dy/dt = g(t, y), g(t_0) = y_0
-      ! g = f/m
-      ! 
-
-      t = 0.
-      h = 0.1035
+      real                                   :: t = 0.
 
       call init_particles(x, v, speed=1., radius=1., n_particles=model % n_particles)
-      x(1,3) = x(1,3)
 
       state(:,1:3) = x(:,1:3)
       state(:,4:6) = v(:,1:3)
 
-      xlim(1, 1:3) = [-box_size,-box_size,-box_size] ! minimum x
-      xlim(2, 1:3) = [box_size,box_size,box_size] ! maximum x
+      xlim(1, 1:3) = [-model % box_size,-model % box_size,-model % box_size] ! minimum x
+      xlim(2, 1:3) = [ model % box_size, model % box_size, model % box_size] ! maximum x
 
       call write_particles(state, 0, 0., model % n_particles)
       do i = 1, 100
-        t = i*h
-        state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, h, velocity_to_delta_x, model)
+        t = i*model % h
+        state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, velocity_to_delta_x, model)
         state = state &
-                + dRK4(state, t, h, pi_attracts_pj, model) !&
-!                + dRK4(state, t, h, medium_resistance, model)
+                + dRK4(state, t, pi_attracts_pj, model) !&
+                !+ dRK4(state, t, medium_resistance, model)
         call set_walls(state, xlim)
-        if (modulo(i, write_output) .eq. 0) then
+        if (modulo(i, model % write_output) .eq. 0) then
           call write_particles(state, i, t, model % n_particles)
         end if
       end do
