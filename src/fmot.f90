@@ -1,8 +1,10 @@
   module fmot
-    use output
     use initialization
+    use output
+    use integ
+    use forces
     implicit none
-    integer, parameter :: n_particles = 5
+    integer, parameter :: n_particles = 3
 
   contains
 
@@ -32,6 +34,7 @@
       h = 0.1035
 
       call init_particles(x, v, speed=1., radius=1., n_particles=n_particles)
+      x(1,3) = x(1,3)
 
       state(:,1:3) = x(:,1:3)
       state(:,4:6) = v(:,1:3)
@@ -42,10 +45,10 @@
       call write_particles(state, 0, 0., n_particles)
       do i = 1, 100
         t = i*h
-        state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, h, velocity_to_delta_x)
+        state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, h, velocity_to_delta_x, n_particles)
         state = state &
-                + dRK4(state, t, h, pi_attracts_pj) &
-                + dRK4(state, t, h, medium_resistance)
+                + dRK4(state, t, h, pi_attracts_pj, n_particles) !&
+!                + dRK4(state, t, h, medium_resistance, n_particles)
         call set_walls(state, xlim)
         if (modulo(i, write_output) .eq. 0) then
           call write_particles(state, i, t, n_particles)
@@ -75,132 +78,5 @@
       end do
     end subroutine
 
-
-    function dRK4(y1, t1, h, f) result (y2)
-      real, dimension(:,:),                             intent(in) :: y1
-      real,                                             intent(in) :: t1, h
-      real, dimension(size(y1,1), size(y1,2))                :: y2
-      interface
-        function f(t, state) result(dstate)
-          real,                                    intent(in) :: t
-          real, dimension(:,:),                    intent(in) :: state
-          real, dimension(size(state,1), size(state,2)) :: dstate
-        end function
-      end interface
-      !------------------------------------------------
-      real                      :: t2
-      real, dimension(size(y1,1), size(y1,2)) :: k1, k2, k3, k4
-      integer :: i
-      ! Runge-Kutta: dy/dt = f(t, y), y(t_0) = y_0
-      ! y_{n+1}=y_n + h/6*(k_1 + 2*k_2 + 2*k_3 + k_4)
-      ! t_{n+1}=t_n + h
-      ! 
-      ! k_1 = f(t_n, y_n)
-      ! k_2 = f(t_n+h/2, y_n+k_1*h/2)
-      ! k_3 = f(t_n+h/2, y_n+k_2*h/2)
-      ! k_4 = f(t_n+h, y_n+k_3*h)
-      ! t2 = t1 + h
-      k1 = f(t1       , y1           )
-      k2 = f(t1 + h/2., y1 + k1*h/2.)
-      k3 = f(t1 + h/2., y1 + k2*h/2.)
-      k4 = f(t1 + h   , y1 + k3*h   )
-      y2 = h/6.*(k1 + 2*k2 + 2*k3 + k4)
-    end function
-
-    function zero_force(t, state) result(dstate)
-      real              , intent(in) :: t
-      real, dimension(:,:), intent(in) :: state
-      real, dimension(size(state,1), size(state,2))     :: dstate
-
-      dstate(:,1:3) = state(:,4:6)
-      dstate(1,4:6) = 0.
-    end function zero_force
-
-    function constant_a_1(t, state) result(dstate)
-      real              , intent(in) :: t
-      real, dimension(:,:), intent(in) :: state
-      real, dimension(size(state,1), size(state,2))     :: dstate
-
-      dstate(:,1:3) = state(:,4:6)
-      dstate(1,4:6) = [0.,2.,0.]
-    end function constant_a_1
-
-    function towards_zero_x(t, state) result(dstate)
-      real              , intent(in) :: t
-      real, dimension(:,:), intent(in) :: state
-      real, dimension(size(state,1), size(state,2))     :: dstate
-      real, dimension(1,3) :: x
-
-      x = state(:,1:3)
-      dstate(:,1:3) = state(:,4:6)
-      dstate(1,4:6) = -x(1,:)
-    end function towards_zero_x
-
-    function p1_attracts_p2(t, state) result(dstate)
-      real              , intent(in) :: t
-      real, dimension(:,:), intent(in) :: state
-      real, dimension(size(state,1), size(state,2))     :: dstate
-      real, dimension(3) :: x1, x2
-      real :: r
-
-      x1 = state(1,1:3)
-      x2 = state(2,1:3)
-      dstate(:,4:6) = 0.
-      r = sqrt(sum((x1-x2)**2.))
-      dstate(:,1:3) = state(:,4:6)
-      dstate(1,4:6) = (x2-x1)/r**2.
-      dstate(2,4:6) = (x1-x2)/r**2.
-    end function p1_attracts_p2
-
-    function velocity_to_delta_x(t, velocity) result(dx)
-      real, intent(in)                                    :: t
-      real, dimension(:,:), intent(in)                    :: velocity
-      real, dimension(size(velocity,1), size(velocity,2)) :: dx
-
-      dx(:,1:3) = velocity(:,1:3)
-    end function velocity_to_delta_x
-
-    function pi_attracts_pj(t, state) result(dstate)
-      real              , intent(in) :: t
-      real, dimension(:,:), intent(in) :: state
-      real, dimension(size(state,1), size(state,2))     :: dstate
-      real, dimension(3) :: x1, x2
-      real, dimension(3) :: a
-      real :: r
-      integer :: i, j
-
-      dstate(:,:) = 0.
-      do i=1,n_particles
-        do j=1,n_particles
-          if (i .ne. j) then
-            x1 = state(i,1:3)
-            x2 = state(j,1:3)
-            r = sqrt(sum((x1-x2)**2.))
-            a = (x2-x1)/r**2.
-            if (r<0.9) a=-2.*a
-            dstate(i,4:6) = dstate(i,4:6) + a
-          end if
-        end do
-      end do
-          
-    end function pi_attracts_pj
-
-    function medium_resistance(t, state) result(dstate)
-      real, intent(in)                              :: t
-      real, dimension(:,:), intent(in)              :: state
-      real, dimension(size(state,1), size(state,2)) :: dstate
-      real, dimension(3) :: x1, x2
-      real, dimension(3) :: a, v
-      real :: r
-      integer :: i
-
-      dstate(:,:) = 0.
-      do i=1,n_particles
-        v = state(i,4:6)
-        a = -10*v**2. * v/sqrt(sum(v**2.))
-        dstate(i,4:6) = dstate(i,4:6) + a
-      end do
-          
-    end function medium_resistance
 
 end module fmot
