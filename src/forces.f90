@@ -1,31 +1,32 @@
 module forces
+  use types
   implicit none
   contains
 
-    function zero_force(t, state, n_particles) result(dstate)
+    function zero_force(t, state, model) result(dstate)
       real, intent(in)                              :: t
       real, dimension(:,:), intent(in)              :: state
-      integer                                       :: n_particles
+      type(model_t)                                 :: model
       real, dimension(size(state,1), size(state,2)) :: dstate
 
       dstate(:,1:3) = state(:,4:6)
       dstate(1,4:6) = 0.
     end function zero_force
 
-    function constant_a_1(t, state, n_particles) result(dstate)
+    function constant_a_1(t, state, model) result(dstate)
       real, intent(in)                              :: t
       real, dimension(:,:), intent(in)              :: state
-      integer                                       :: n_particles
+      type(model_t)                                 :: model
       real, dimension(size(state,1), size(state,2)) :: dstate
 
       dstate(:,1:3) = state(:,4:6)
       dstate(1,4:6) = [0.,2.,0.]
     end function constant_a_1
 
-    function towards_zero_x(t, state, n_particles) result(dstate)
+    function towards_zero_x(t, state, model) result(dstate)
       real, intent(in)                              :: t
       real, dimension(:,:), intent(in)              :: state
-      integer                                       :: n_particles
+      type(model_t)                                 :: model
       real, dimension(size(state,1), size(state,2)) :: dstate
       real, dimension(1,3)                          :: x
 
@@ -34,10 +35,10 @@ module forces
       dstate(1,4:6) = -x(1,:)
     end function towards_zero_x
 
-    function p1_attracts_p2(t, state, n_particles) result(dstate)
+    function p1_attracts_p2(t, state, model) result(dstate)
       real, intent(in)                              :: t
       real, dimension(:,:), intent(in)              :: state
-      integer                                       :: n_particles
+      type(model_t)                                 :: model
       real, dimension(size(state,1), size(state,2)) :: dstate
       real, dimension(3)                            :: x1, x2
       real                                          :: r
@@ -51,19 +52,19 @@ module forces
       dstate(2,4:6) = (x1-x2)/r**2.
     end function p1_attracts_p2
 
-    function velocity_to_delta_x(t, velocity, n_particles) result(dx)
+    function velocity_to_delta_x(t, velocity, model) result(dx)
       real, intent(in)                                    :: t
       real, dimension(:,:), intent(in)                    :: velocity
-      integer                                             :: n_particles
+      type(model_t)                                       :: model
       real, dimension(size(velocity,1), size(velocity,2)) :: dx
 
       dx(:,1:3) = velocity(:,1:3)
     end function velocity_to_delta_x
 
-    function pi_attracts_pj(t, state, n_particles) result(dstate)
+    function pi_attracts_pj(t, state, model) result(dstate)
       real, intent(in)                              :: t
       real, dimension(:,:), intent(in)              :: state
-      integer                                       :: n_particles
+      type(model_t)                                 :: model
       real, dimension(size(state,1), size(state,2)) :: dstate
       real, dimension(3)                            :: x1, x2
       real, dimension(3)                            :: a
@@ -71,8 +72,8 @@ module forces
       integer                                       :: i, j
 
       dstate(:,:) = 0.
-      do i=1,n_particles
-        do j=1,n_particles
+      do i=1,model % n_particles
+        do j=1,model % n_particles
           if (i .ne. j) then
             x1 = state(i,1:3)
             x2 = state(j,1:3)
@@ -86,10 +87,10 @@ module forces
           
     end function pi_attracts_pj
 
-    function medium_resistance(t, state, n_particles) result(dstate)
+    function medium_resistance(t, state, model) result(dstate)
       real, intent(in)                              :: t
       real, dimension(:,:), intent(in)              :: state
-      integer                                       :: n_particles
+      type(model_t)                                 :: model
       real, dimension(size(state,1), size(state,2)) :: dstate
       real, dimension(3)                            :: x1, x2
       real, dimension(3)                            :: a, v
@@ -97,7 +98,7 @@ module forces
       integer                                       :: i
 
       dstate(:,:) = 0.
-      do i=1,n_particles
+      do i=1,model % n_particles
         v = state(i,4:6)
         a = -10*v**2. * v/sqrt(sum(v**2.))
         dstate(i,4:6) = dstate(i,4:6) + a

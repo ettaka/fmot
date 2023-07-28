@@ -3,26 +3,21 @@
     use output
     use integ
     use forces
+    use types
     implicit none
-    integer, parameter :: n_particles = 3
 
   contains
 
-    subroutine main_loop
-      use types
-
-      integer :: i, j
-
-      real, dimension(n_particles,3) :: x
-      real, dimension(n_particles,3) :: v
-
-      real, dimension(n_particles,6) :: state
-      
-      real :: box_size=2.
-      real, dimension(2, 3) :: xlim
-
-      real :: t, h
-      integer :: write_output = 1
+    subroutine main_loop(model)
+      type(model_t), intent(in)              :: model
+      integer                                :: i, j
+      real, dimension(model % n_particles,3) :: x
+      real, dimension(model % n_particles,3) :: v
+      real, dimension(model % n_particles,6) :: state
+      real                                   :: box_size=2.
+      real, dimension(2, 3)                  :: xlim
+      real                                   :: t, h
+      integer                                :: write_output = 1
 
 
       ! f = ma = m dv/dt = m ddt(x)
@@ -33,7 +28,7 @@
       t = 0.
       h = 0.1035
 
-      call init_particles(x, v, speed=1., radius=1., n_particles=n_particles)
+      call init_particles(x, v, speed=1., radius=1., n_particles=model % n_particles)
       x(1,3) = x(1,3)
 
       state(:,1:3) = x(:,1:3)
@@ -42,26 +37,26 @@
       xlim(1, 1:3) = [-box_size,-box_size,-box_size] ! minimum x
       xlim(2, 1:3) = [box_size,box_size,box_size] ! maximum x
 
-      call write_particles(state, 0, 0., n_particles)
+      call write_particles(state, 0, 0., model % n_particles)
       do i = 1, 100
         t = i*h
-        state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, h, velocity_to_delta_x, n_particles)
+        state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, h, velocity_to_delta_x, model)
         state = state &
-                + dRK4(state, t, h, pi_attracts_pj, n_particles) !&
-!                + dRK4(state, t, h, medium_resistance, n_particles)
+                + dRK4(state, t, h, pi_attracts_pj, model) !&
+!                + dRK4(state, t, h, medium_resistance, model)
         call set_walls(state, xlim)
         if (modulo(i, write_output) .eq. 0) then
-          call write_particles(state, i, t, n_particles)
+          call write_particles(state, i, t, model % n_particles)
         end if
       end do
     end subroutine main_loop
 
     subroutine set_walls(state, xlim)
-      real, dimension(n_particles,6) :: state
+      real, dimension(:,:) :: state
       real, dimension(2, 3), intent(in) :: xlim
       integer :: j
 
-      do j = 1, n_particles
+      do j = 1, size(state, dim=1)
         if (state(j, 1) .le. xlim(1, 1) .and. state(j, 4) < 0.) then
           state(j, 4) = -state(j, 4)
         else if (state(j, 1) .ge. xlim(2, 1) .and. state(j, 4) > 0.) then
@@ -77,6 +72,5 @@
         end if
       end do
     end subroutine
-
 
 end module fmot
