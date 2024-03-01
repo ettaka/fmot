@@ -2,7 +2,7 @@
     use initialization
     use output
     use integ
-    use forces
+    use forces, only: init_forces, force_array, velocity_to_delta_x
     use types
     implicit none
 
@@ -16,8 +16,10 @@
       real, dimension(model % n_particles,6) :: state
       real, dimension(2, 3)                  :: xlim
       real                                   :: t = 0.
+      integer                                :: i_force
 
       call init_particles(x, v, speed=1., radius=1., n_particles=model % n_particles)
+      call init_forces
 
       state(:,1:3) = x(:,1:3)
       state(:,4:6) = v(:,1:3)
@@ -29,9 +31,9 @@
       do i = 1, 100
         t = i*model % h
         state(:, 1:3) = state(:, 1:3) + dRK4(state(:, 4:6), t, velocity_to_delta_x, model)
-        state = state &
-                + dRK4(state, t, pi_attracts_pj, model) !&
-                !+ dRK4(state, t, medium_resistance, model)
+        do i_force = 1, size(force_array, dim=1)
+          state = state + dRK4(state, t, force_array(i_force)%f, model)
+        end do
         call set_walls(state, xlim)
         if (modulo(i, model % write_output) .eq. 0) then
           call write_particles(state, i, t, model % n_particles)

@@ -1,7 +1,29 @@
 module forces
   use types
   implicit none
+
+  interface
+    function force(t, state, model) result(dstate)
+      use types
+      real, intent(in)                              :: t
+      real, dimension(:,:), intent(in)              :: state
+      real, dimension(size(state,1), size(state,2)) :: dstate
+      type(model_t)                                 :: model
+    end function
+  end interface
+
+  type :: fp
+    procedure(force), pointer, nopass :: f => null()
+  end type
+
+  type(fp) :: force_array(2)
+
   contains
+
+    subroutine init_forces
+      force_array(1) % f => pi_attracts_pj
+      force_array(2) % f => medium_resistance
+    end subroutine init_forces
 
     function zero_force(t, state, model) result(dstate)
       real, intent(in)                              :: t
